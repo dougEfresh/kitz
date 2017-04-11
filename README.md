@@ -11,7 +11,7 @@ Send go-kit logs to Logzio
 
 ### Initialize Logger
 ```go
-package yourpackagename
+package main
 
 import (
         "github.com/dougEfresh/kitz"
@@ -25,6 +25,7 @@ func main() {
         if err != nil {
                 panic(err)
         }
+        // message is required 
         logger.Log("message", "hello!")
 }
 ```

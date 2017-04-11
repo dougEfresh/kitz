@@ -14,9 +14,10 @@
 
 package kitz
 
-import "io"
 import (
+	"github.com/cenkalti/backoff"
 	"github.com/go-kit/kit/log"
+	"io"
 	"net"
 )
 
@@ -30,8 +31,16 @@ type logger struct {
 }
 
 func (l logger) Write(p []byte) (n int, err error) {
-	return l.conn.Write(p)
+	err = backoff.Retry(func() error {
+		_, err := l.conn.Write(p)
+		return err
+	}, backoff.NewExponentialBackOff())
+	if err != nil {
+		return 0, err
+	}
+	return len(p), err
 }
+
 // WithDefaults creates a new go-kit logger
 // This uses DefaultTimestampUTC as a time format and listener.logz.io:5050 endpoint
 func WithDefaults(token string) (log.Logger, error) {

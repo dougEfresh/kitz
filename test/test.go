@@ -15,8 +15,8 @@
 package main
 
 import (
-	"os"
 	"github.com/dougEfresh/kitz"
+	"os"
 )
 
 func main() {
