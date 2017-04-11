@@ -23,10 +23,8 @@ import (
         "github.com/go-kit/kit/log"
 )
 
-const LOGZIO_TOKEN = "123456789"
-
 func main() {
-        klogger, err := kitz.New(LOGZIO_TOKEN)
+        klogger, err := kitz.New("123456789")
         if err != nil {
                 panic(err)
         }
@@ -36,5 +34,3 @@ func main() {
         logger.Log("message", "hello!")
 }
 ```
-
-**NOTE**: Set `LOGZIO_TOKEN` to the Logzio token as mentioned in `Get Logzio token`.
