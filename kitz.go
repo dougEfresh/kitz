@@ -15,6 +15,7 @@
 package kitz
 
 import (
+	"errors"
 	"github.com/cenkalti/backoff"
 	"github.com/go-kit/kit/log"
 	"io"
@@ -26,11 +27,20 @@ const (
 	proto    = "tcp"
 )
 
-type logger struct {
-	conn io.Writer
+var ErrorConnection = errors.New("No connection defined to logz")
+var ErrorInvalidToken = errors.New("Invalid token")
+
+type Logger struct {
+	conn   io.Writer
+	ep     string
+	ts     log.Valuer
+	logger log.Logger
 }
 
-func (l logger) Write(p []byte) (n int, err error) {
+func (l *Logger) Write(p []byte) (n int, err error) {
+	if l.conn == nil {
+		return 0, ErrorConnection
+	}
 	err = backoff.Retry(func() error {
 		_, err := l.conn.Write(p)
 		return err
@@ -41,20 +51,44 @@ func (l logger) Write(p []byte) (n int, err error) {
 	return len(p), err
 }
 
-// WithDefaults creates a new go-kit logger
-// This uses DefaultTimestampUTC as a time format and listener.logz.io:5050 endpoint
-func WithDefaults(token string) (log.Logger, error) {
-	return New(token, Endpoint, log.DefaultTimestampUTC)
+// WithTimestamp overrides DefaultTimestampUTC
+func (l *Logger) WithTimestamp(ts log.Valuer) *Logger {
+	l.logger = log.With(l.logger, "time", ts)
+	return l
 }
 
-// Creates a new go-kit logger
-func New(token, ep string, ts log.Valuer) (log.Logger, error) {
+// WithEndpoint overrides default endpoint: listener.logz.io:5050 endpoint
+func (l *Logger) WithEndpoint(ep string) (*Logger, error) {
 	conn, err := net.Dial(proto, ep)
 	if err != nil {
-		return nil, err
+		return l, err
 	}
-	klogger := log.NewJSONLogger(logger{conn})
+	l.conn = conn
+	return l, nil
+}
+
+// Creates a new kitz logger with defaults listener.logz.io:5050 and DefaultTimestampUTC
+func New(token string) (*Logger, error) {
+	l := Logger{
+		ep: Endpoint,
+		ts: log.DefaultTimestampUTC,
+	}
+	if token == "" {
+		return nil, ErrorInvalidToken
+	}
+	klogger := log.NewJSONLogger(&l)
 	klogger = log.With(klogger, "token", token)
-	klogger = log.With(klogger, "time", ts)
-	return klogger, nil
+	klogger = log.With(klogger, "time", l.ts)
+	l.logger = klogger
+	conn, err := net.Dial(proto, Endpoint)
+	if err != nil {
+		return &l, err
+	}
+	l.conn = conn
+	return &l, nil
+}
+
+// Build returns the (configured) go-kit logger
+func (l *Logger) Build() log.Logger {
+	return l.logger
 }

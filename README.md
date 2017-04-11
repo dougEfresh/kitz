@@ -1,6 +1,11 @@
 # Logzio for go-kit logger
 Send go-kit logs to Logzio
 
+[![Build Status](https://travis-ci.org/dougEfresh/kitz.svg?branch=master)](https://travis-ci.org/dougEfresh/kitz)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dougEfresh/kitz)](https://goreportcard.com/report/github.com/dougEfresh/kitz)
+[![GoDoc](https://godoc.org/github.com/dougEfresh/kitz?status.svg)](https://godoc.org/github.com/dougEfresh/kitz)
+[![license](http://img.shields.io/badge/license-apache-red.svg?style=flat)](https://raw.githubusercontent.com/dougEfresh/kitz/master/LICENSE)
+
 ## Getting Started
 
 ### Get Logzio token
@@ -21,11 +26,13 @@ import (
 const LOGZIO_TOKEN = "123456789"
 
 func main() {
-        logger, err := kitz.WithDefaults(LOGZIO_TOKEN)
+        klogger, err := kitz.New(LOGZIO_TOKEN)
         if err != nil {
                 panic(err)
         }
-        // message is required 
+ 
+        logger := klogger.Build()
+        // message is required
         logger.Log("message", "hello!")
 }
 ```

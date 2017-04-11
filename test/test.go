@@ -20,11 +20,11 @@ import (
 )
 
 func main() {
-	l, err := kitz.WithDefaults(os.Args[1])
+	l, err := kitz.New(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
-	err = l.Log("message", "testing 123")
+	err = l.Build().Log("message", "testing 123")
 	if err != nil {
 		panic(err)
 	}

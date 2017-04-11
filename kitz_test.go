@@ -31,15 +31,15 @@ func TestKitz(t *testing.T) {
 	}
 	defer ln.Close()
 	go acceptConnection(ln)
-	l, err := New("123456789", "localhost:5050", log.DefaultTimestampUTC)
-	if err != nil {
-		t.Fatal(err)
-	}
+	l, _ := New("123456789")
+	l.WithEndpoint("localhost:5050")
+	l.WithTimestamp(log.DefaultTimestampUTC)
+	logger := l.Build()
 
-	if l == nil {
+	if logger == nil {
 		t.Fatal("Logger is nil")
 	}
-	l.Log("message", "test msg")
+	logger.Log("message", "test msg")
 	time.Sleep(200 * time.Millisecond)
 	msg := string(sent)
 	if msg == "" {
