@@ -28,7 +28,7 @@ func main() {
         if err != nil {
                 panic(err)
         }
- 
+        // returns the go-kit logger
         logger := klogger.Build()
         // message is required
         logger.Log("message", "hello!")
