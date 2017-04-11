@@ -25,14 +25,14 @@ import (
 var sent []byte = make([]byte, 1024)
 
 func TestKitz(t *testing.T) {
-	ln, err := net.Listen("tcp", "localhost:5050")
+	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer ln.Close()
 	go acceptConnection(ln)
 	l, _ := New("123456789")
-	l.WithEndpoint("localhost:5050")
+	l.WithEndpoint(ln.Addr().String())
 	l.WithTimestamp(log.DefaultTimestampUTC)
 	logger := l.Build()
 
