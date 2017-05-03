@@ -24,7 +24,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = l.Build().Log("message", "testing 123")
+	err = l.Log("message", "testing 123")
+	l.Stop()
 	if err != nil {
 		panic(err)
 	}
