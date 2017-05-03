@@ -16,61 +16,48 @@ package kitz
 
 import (
 	"errors"
-	"github.com/cenkalti/backoff"
+	"github.com/dougEfresh/logzio-go"
 	"github.com/go-kit/kit/log"
-	"io"
-	"net"
 )
 
-const (
-	Endpoint = "listener.logz.io:5050"
-	proto    = "tcp"
-)
-
-var ErrorConnection = errors.New("No connection defined to logz")
 var ErrorInvalidToken = errors.New("Invalid token")
 
+type ClientOptionFunc func(*Logger) error
+
 type Logger struct {
-	conn   io.Writer
-	ep     string
 	ts     log.Valuer
 	logger log.Logger
+	logz   *logzio.LogzioSender
+}
+
+func (l *Logger) Log(keyvals ...interface{}) error {
+	return l.logger.Log(keyvals...)
 }
 
 func (l *Logger) Write(p []byte) (n int, err error) {
-	if l.conn == nil {
-		return 0, ErrorConnection
-	}
-	err = backoff.Retry(func() error {
-		_, err := l.conn.Write(p)
-		return err
-	}, backoff.NewExponentialBackOff())
-	if err != nil {
-		return 0, err
-	}
-	return len(p), err
+	err = l.logz.Send(p)
+	n = len(p)
+	return
 }
 
 // WithTimestamp overrides DefaultTimestampUTC
-func (l *Logger) WithTimestamp(ts log.Valuer) *Logger {
-	l.logger = log.With(l.logger, "time", ts)
-	return l
-}
-
-// WithEndpoint overrides default endpoint: listener.logz.io:5050 endpoint
-func (l *Logger) WithEndpoint(ep string) (*Logger, error) {
-	conn, err := net.Dial(proto, ep)
-	if err != nil {
-		return l, err
+func SetTimestamp(ts log.Valuer) ClientOptionFunc {
+	return func(l *Logger) error {
+		l.logger = log.With(l.logger, "time", ts)
+		return nil
 	}
-	l.conn = conn
-	return l, nil
 }
 
-// Creates a new kitz logger with defaults listener.logz.io:5050 and DefaultTimestampUTC
-func New(token string) (*Logger, error) {
+// SetUrl overrides default endpoint
+func SetUrl(url string) ClientOptionFunc {
+	return func(l *Logger) error {
+		return logzio.SetUrl(url)(l.logz)
+	}
+}
+
+// Creates a new kitz logger with DefaultTimestampUTC
+func New(token string, options ...ClientOptionFunc) (*Logger, error) {
 	l := Logger{
-		ep: Endpoint,
 		ts: log.DefaultTimestampUTC,
 	}
 	if token == "" {
@@ -80,15 +67,20 @@ func New(token string) (*Logger, error) {
 	klogger = log.With(klogger, "token", token)
 	klogger = log.With(klogger, "time", l.ts)
 	l.logger = klogger
-	conn, err := net.Dial(proto, Endpoint)
-	if err != nil {
-		return &l, err
+
+	logz, e := logzio.New(token)
+	if e != nil {
+		return nil, e
 	}
-	l.conn = conn
+	l.logz = logz
+	for _, option := range options {
+		if err := option(&l); err != nil {
+			return nil, err
+		}
+	}
 	return &l, nil
 }
 
-// Build returns the (configured) go-kit logger
-func (l *Logger) Build() log.Logger {
-	return l.logger
+func (l *Logger) Stop() {
+	l.logz.Stop()
 }

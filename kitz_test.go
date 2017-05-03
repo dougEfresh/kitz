@@ -16,7 +16,8 @@ package kitz
 
 import (
 	"github.com/go-kit/kit/log"
-	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -25,29 +26,27 @@ import (
 var sent []byte = make([]byte, 1024)
 
 func TestKitz(t *testing.T) {
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ln.Close()
-	go acceptConnection(ln)
-	l, _ := New("123456789")
-	l.WithEndpoint(ln.Addr().String())
-	l.WithTimestamp(log.DefaultTimestampUTC)
-	logger := l.Build()
-
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		r.Body.Read(sent)
+	}))
+	defer ts.Close()
+	logger, _ := New("123456789", SetUrl(ts.URL), SetTimestamp(log.DefaultTimestampUTC))
 	if logger == nil {
 		t.Fatal("Logger is nil")
 	}
 	logger.Log("message", "test msg")
-	time.Sleep(200 * time.Millisecond)
+	logger.Stop()
+
+	time.Sleep(500 * time.Millisecond)
+
 	msg := string(sent)
 	if msg == "" {
 		t.Fatal("Message not send")
 	}
 
 	if !strings.Contains(msg, "\"message\":") {
-		t.Fatal("no message field")
+		t.Fatalf("no message field %s", msg)
 	}
 
 	if !strings.Contains(msg, "\"token\":\"123456789\"") {
@@ -59,10 +58,17 @@ func TestKitz(t *testing.T) {
 	}
 }
 
-func acceptConnection(listener net.Listener) {
-	for {
-		conn, _ := listener.Accept()
-		conn.Read(sent)
-		conn.Close()
+func BenchmarkNew(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+	logger, _ := New("123456789", SetUrl(ts.URL), SetTimestamp(log.DefaultTimestampUTC))
+	if logger == nil {
+		b.Fatal("Logger is nil")
+	}
+
+	for i := 0; i < b.N; i++ {
+		logger.Log("message", "test msg")
 	}
 }
