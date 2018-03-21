@@ -37,22 +37,18 @@ func TestKitz(t *testing.T) {
 	}
 	logger.Log("message", "test msg")
 	logger.Stop()
-
 	time.Sleep(500 * time.Millisecond)
 
 	msg := string(sent)
 	if msg == "" {
 		t.Fatal("Message not send")
 	}
-
 	if !strings.Contains(msg, "\"message\":") {
 		t.Fatalf("no message field %s", msg)
 	}
-
 	if !strings.Contains(msg, "\"token\":\"123456789\"") {
 		t.Fatal("no token field")
 	}
-
 	if !strings.Contains(msg, "\"time\":\"") {
 		t.Fatal("no time field")
 	}

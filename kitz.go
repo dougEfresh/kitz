@@ -16,31 +16,37 @@ package kitz
 
 import (
 	"errors"
+
 	"github.com/dougEfresh/logzio-go"
 	"github.com/go-kit/kit/log"
 )
 
+// ErrorInvalidToken Error for tokens
 var ErrorInvalidToken = errors.New("Invalid token")
 
+// ClientOptionFunc to set options
 type ClientOptionFunc func(*Logger) error
 
+// Logger structure
 type Logger struct {
 	ts     log.Valuer
 	logger log.Logger
 	logz   *logzio.LogzioSender
 }
 
+// Log Statisfies go-kit log interface
 func (l *Logger) Log(keyvals ...interface{}) error {
 	return l.logger.Log(keyvals...)
 }
 
+// Write Statisfies go-kit log interface
 func (l *Logger) Write(p []byte) (n int, err error) {
 	err = l.logz.Send(p)
 	n = len(p)
 	return
 }
 
-// WithTimestamp overrides DefaultTimestampUTC
+// SetTimestamp overrides DefaultTimestampUTC
 func SetTimestamp(ts log.Valuer) ClientOptionFunc {
 	return func(l *Logger) error {
 		l.logger = log.With(l.logger, "time", ts)
@@ -55,7 +61,8 @@ func SetUrl(url string) ClientOptionFunc {
 	}
 }
 
-// Creates a new kitz logger with DefaultTimestampUTC
+// New Creates a new kitz logger with DefaultTimestampUTC
+//  l, err := kitz.New("api-key")
 func New(token string, options ...ClientOptionFunc) (*Logger, error) {
 	l := Logger{
 		ts: log.DefaultTimestampUTC,
@@ -81,6 +88,11 @@ func New(token string, options ...ClientOptionFunc) (*Logger, error) {
 	return &l, nil
 }
 
+// Stop the logger and drain local values to Logz.io
 func (l *Logger) Stop() {
 	l.logz.Stop()
+}
+
+func (l *Logger) Drain() {
+	l.logz.Drain()
 }
